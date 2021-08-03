@@ -3,39 +3,54 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <assert.h>
 
-#define vector(type, name, block_size)\
-typedef struct {\
-	type* begin;\
-	type* cursor;\
-	type* end;\
-	const size_t block_size_bytes;\
-} vector;\
-\
-const long int vec_get_len_bytes(vector v) {return (v.cursor - v.begin)*sizeof(type);}\
-const long int vec_get_len(vector v) {return (v.cursor - v.begin);}\
-const long int vec_get_allocated(vector v) {return (v.end - v.begin);}\
-const long int vec_get_allocated_bytes(vector v) {return (v.end - v.begin)*sizeof(type);}\
-\
-void vec_realloc(vector *v, const size_t new_size_bytes) {\
-	const size_t length = vec_get_len(*v);\
-	v->begin = realloc(v->begin, new_size_bytes);\
-	v->cursor = v->begin + length;\
-	v->end = v->begin + new_size_bytes/sizeof(type) - 1;}\
-\
-void vec_init(vector *v) {\
-	v->begin = malloc(v->block_size_bytes);\
-	v->cursor = v->begin;\
-	v->end = v->begin + v->block_size_bytes/sizeof(type) - 1;}\
-\
-void vec_free(vector *v) {free(v->begin); v->begin = v->end = v->cursor = NULL;}\
-\
-void vec_set(vector *v, const int index, const type value) {if(v->end - v->begin > 0) v->begin[index] = value;}\
-\
-void vec_push(vector *v, const type value) {\
-	while(v->end < v->cursor+1) {vec_realloc(v, vec_get_len_bytes(*v) + v->block_size_bytes);}\
-	++v->cursor; vec_set(v, vec_get_len(*v), value);}\
-\
-vector name = {NULL, NULL, NULL, block_size};
+typedef struct {
+        int len;
+        int cap;
+} array_header;
+
+#define new_vector(TYPE, NAME) \
+    TYPE *NAME; \
+    array_header *HEADER; \
+    assert(&NAME != NULL); \
+    HEADER = malloc(sizeof(array_header) + sizeof(TYPE)*8); \
+    HEADER->cap = 8; \
+    HEADER->len = 0; \
+    NAME = HEADER+1;
+
+#define vec_get_hdr(SB)      ((array_header *)SB-1)
+
+#define vec_get_len(SB)      (SB ? vec_get_hdr(SB)->len : 0)
+#define vec_get_capacity(SB) (SB ? vec_get_hdr(SB)->cap : 0)
+
+#define vec_push(SB, ELEM)   (vec_append_e(&(SB), sizeof (*(SB))), (SB)[vec_get_len((SB))-1] = (ELEM))
+#define vec_pop(SB)          (vec_pop_e(&(SB), sizeof(*(SB))))
+
+#define vec_free(SB)         (SB ? free(vec_get_hdr(SB)), 0 : 0)
+
+
+void vec_append_e(void **sb, size_t isz) {
+    array_header *h = vec_get_hdr(*sb);
+    if (h->len+1 > h->cap) {
+        h->cap *= 2;
+        h = realloc(h, sizeof(array_header) + h->cap*isz);
+        *sb = h+1;
+    }
+    h->len++;
+}
+
+void vec_pop_e(void **sb, size_t isz) {
+	array_header *h;
+
+	h = vec_get_hdr(*sb);
+	if (h->len-1 < h->cap-8) {
+		h->cap-=8;
+		h = realloc(h, sizeof(array_header) + h->cap*isz);
+		*sb = h+1;
+	}
+	h->len--;
+}
 
 #endif

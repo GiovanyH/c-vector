@@ -1,2 +1,2 @@
-# c-vector
-a vector I made to learn about memory and pointers in C.
+# C-Vector
+Vector I made to learn stretchy buffers
