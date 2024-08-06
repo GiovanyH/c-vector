@@ -1,6 +1,6 @@
 # C-Vector
 Code:
-```
+```C
 #define new_vector(TYPE, NAME) \
     TYPE *NAME = (TYPE*)((int*)malloc(2 * sizeof(int) + sizeof(TYPE) * 8) + 2); \
     ((int *)NAME)[-2] = 0; ((int *)NAME)[-1] = 8;
